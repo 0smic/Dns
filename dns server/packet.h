@@ -6,6 +6,7 @@
 #define packed __attribute__((packed))
 
 
+
 struct packed ip{
     uint8_t version_IHL; // version: 4, ihl:4
     uint8_t Dscp_ecn;    // dscp:6, ecn:2
@@ -27,7 +28,7 @@ struct packed eth{
 
 };
 
-struct packed dns{
+struct packed dns_header{
     uint16_t id;
     uint16_t flags;
     struct {
@@ -38,11 +39,16 @@ struct packed dns{
     }packed num;
 };
 
+struct packed dns_tail{
+    uint16_t qtype;
+    uint16_t qclass;
+};
+
 struct packed udp{
     uint16_t src;
     uint16_t dest;
     uint16_t len;
-    uint16_t check_sum;
+    uint16_t check_sum_udp;
 
 };
 
@@ -51,4 +57,17 @@ struct packed packet{
     struct ip;
     struct udp;
     struct dns;
+};
+
+
+
+enum {
+    ETH_SIZE = sizeof(struct eth),
+    IP_SIZE  = sizeof(struct ip),
+    UDP_SIZE = sizeof(struct udp),
+
+    ETH_OFFSET = 0,
+    IP_OFFSET  = ETH_OFFSET + ETH_SIZE,
+    UDP_OFFSET = IP_OFFSET + IP_SIZE,
+    DNS_OFFSET = UDP_OFFSET + UDP_SIZE
 };
