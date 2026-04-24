@@ -5,7 +5,23 @@ uint16_t conv16(uint16_t in);
 int big_or_little();
 int get_endianness();
 
+uint8_t buffer[1500];
 
+struct packed packet_ptr{
+    struct eth *eth;
+    struct ip *ip;
+    struct udp *udp;
+    struct dns_header *dns_header;
+};
+
+struct packet_ptr *packet_init(uint8_t buffer[]){
+    struct packet_ptr *p;
+    p->eth = (struct eth *)(buffer + ETH_OFFSET);
+    p->ip = (struct ip *)(buffer + IP_OFFSET);
+    p->udp = (struct udp *)(buffer + UDP_OFFSET);
+    p->dns_header = (struct dns_header*) (buffer + DNS_OFFSET);
+    return p;
+}
 
 
 int big_or_little(){
