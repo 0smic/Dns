@@ -2,7 +2,7 @@
 
 A low-level DNS resolver being built from scratch in C, focusing on manual packet construction, parsing, and protocol-level understanding of networking.
 
-##🚧 Current Status
+## Current Status
 
 This project is in early development.
 
@@ -44,8 +44,8 @@ All structures are manually defined using packed memory layout.
 ## Endianness Handling
 
 -  Custom byte-order conversion:
-  -  conv16()
-  -  conv32()
+    -  `conv16()`
+    -  `conv32()`
 -  Runtime endianness detection
 
 
