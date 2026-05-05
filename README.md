@@ -56,6 +56,6 @@ All structures are manually defined using packed memory layout.
 3)  Extract header fields manually
 4)  Construct DNS query name (google.com) in wire format:
 
-``` 6 google 3 com 0 ```
+    -  ``` 6 google 3 com 0 ```
 
 5)  Append DNS question tail
