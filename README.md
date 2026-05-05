@@ -11,7 +11,7 @@ At the moment, it focuses on:
 - Raw packet structure definitions (Ethernet, IP, UDP, DNS)
 - Manual parsing of IP headers
 - DNS query packet construction
-E- ndianness handling and byte-level manipulation
+- Endianness handling and byte-level manipulation
 
 This is not yet a fully functional recursive resolver.
 
