@@ -58,6 +58,19 @@ struct packed dns_header{
     }packed num;
 };
 
+struct packed dns_flags{
+    uint16_t QR;    // 1 bit flag
+    uint16_t OPCODE;    // 4 bit flag
+    uint16_t AA;    // 1 bit flag
+    uint16_t TC;    // 1 bit flag
+    uint16_t RD;    // 1 bit flag
+    uint16_t RA;    // 1 bit flag
+    uint16_t Z;     // 1 bit flag
+    uint16_t AD;    // 1 bit flag
+    uint16_t CD;    // 1 bit flag
+    uint16_t RCODE;     // 4 bit flag
+};
+
 struct packed dns_question_tail{
     uint16_t qtype;
     uint16_t qclass;
@@ -70,6 +83,7 @@ struct packed udp{
     uint16_t check_sum_udp;
 
 };
+
 
 struct packed packet_ptr{
     struct eth *eth;
@@ -106,3 +120,12 @@ void extract(struct ip*);
 uint16_t conv16(uint16_t);
 uint32_t conv32(uint32_t);
 int get_endianness();
+
+void init_val_eth(struct packet_ptr *ptr);
+void init_val_udp(struct packet_ptr*);
+void init_val_ip(struct packet_ptr*);
+void init_val_udp(struct packet_ptr*);
+void init_val_dns_header(struct packet_ptr*);
+
+uint16_t ip_checksum(struct packet_ptr*);
+uint16_t udp_checksum(struct packet_ptr*);
