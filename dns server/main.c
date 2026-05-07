@@ -1,21 +1,55 @@
 #include "packet.h"
 
-uint32_t conv32(uint32_t in);
-uint16_t conv16(uint16_t in);
-int big_or_little();
-int get_endianness();
-
 uint8_t raw_buffer[1500];
 
 struct ip_details dflt_ip = {
     .version = 4,
     .ihl = 5,
     .dscp = 0,
-    .ecn = 0
-
-    
+    .ecn = 0,
+    .total_length = 0x0014,
+    .identification = 0x0000,
+    .flag = 0x00,
+    .fragment = 0,
+    .timetolive = 64,
+    .protocol = 17, // UDP
+    .check_sum = 0x0000,
+    .source = 0xC0A80125,
+    .destination = 0x08080808
 };
 
+struct udp dflt_udp = {
+    .src = 1030,
+    .dest = 53,
+    .len = 8,
+    .check_sum_udp = 0x0000
+};
+
+struct dns_header dflt_dns ={
+    .id = 0,
+    .flags = 0,
+    .num = {
+        .questions = 1,
+        .answers = 0,
+        .authority_rss = 0,
+        .additional_rss = 0,
+    }
+};
+
+
+struct dns_flags dflt_flag = {
+    .QR = 0,
+    .OPCODE = 0,
+    .AA = 0,
+    .TC = 0,
+    .RD = 1,
+    .RA = 0,
+    .Z = 0,
+    .AD = 0,
+    .CD = 0,
+    .RCODE = 0
+
+};
 
 struct packet_ptr *packet_init(uint8_t buffer[]){
     struct packet_ptr *p = malloc(sizeof(struct packet_ptr));
@@ -38,18 +72,22 @@ struct packet_ptr *packet_init(uint8_t buffer[]){
     // end func
 
     p->tail = (struct dns_question_tail *)ptr;
-    p->tail->qtype = conv16(QUESTION_IPV4);
-    p->tail->qclass = conv16(QUESTION_INTERNET); 
-    // fill the tail later
+    init_val_eth(p);
+    init_val_ip(p);
+    init_val_udp(p);
+    init_val_dns_header(p);
+    init_val_dns_tail(p); 
     return p;
 }
+
+
 
 void init_val_eth(struct packet_ptr *ptr){
     // need to complete
     struct eth *eth = ptr->eth;
     eth->src_mac;
     eth->dest_mac;
-    eth->eth_type = conv32(ETH_IPV4);
+    eth->eth_type = conv16(ETH_IPV4);
 }
 
 void init_val_ip(struct packet_ptr *ptr){
@@ -57,8 +95,97 @@ void init_val_ip(struct packet_ptr *ptr){
     struct ip *ip = ptr->ip;
     ip->version_IHL = (dflt_ip.version << 4) | dflt_ip.ihl;
     ip->Dscp_ecn = (dflt_ip.dscp << 2) | dflt_ip.ecn;
+    ip->identification = conv16(dflt_ip.identification);
+    ip->Total_length = conv16(dflt_ip.total_length);
+    ip->flag_fragment = conv16((dflt_ip.flag << 13) | dflt_ip.fragment);
+    ip->timetolive = dflt_ip.timetolive;
+    ip->protocol = dflt_ip.protocol;
+    ip->check_sum = conv16(dflt_ip.check_sum);
+    ip->source = conv32(0xC0A80125);
+    ip->destination = conv32( 0x08080808);
+    ip->check_sum = ip_checksum(ptr);
 }
 
+void init_val_udp(struct packet_ptr *ptr){
+    struct udp *udp = ptr->udp;
+    udp->src = conv16(dflt_udp.src);
+    udp->dest = conv16(dflt_udp.dest);
+    udp->len = conv16(dflt_udp.len);
+    udp->check_sum_udp = conv16(dflt_udp.check_sum_udp);
+
+}
+
+void init_val_dns_header(struct packet_ptr *ptr){
+    struct dns_header *dns = ptr->dns_header;
+    dns->id = conv16(dflt_dns.id);
+    // initalizing all the flag
+    uint16_t flag = 0;
+    flag |= (dflt_flag.QR << 15);
+    flag |= (dflt_flag.OPCODE << 11);
+    flag |= (dflt_flag.AA << 10);
+    flag |= (dflt_flag.TC << 9);
+    flag |= (dflt_flag.RD << 8);
+    flag |= (dflt_flag.RA << 7);
+    flag |= (dflt_flag.Z << 6);
+    flag |= (dflt_flag.AD << 5);
+    flag |= (dflt_flag.CD << 4);
+    flag |= (dflt_flag.RCODE);
+
+    dns->flags = conv16(flag);
+    dns->num.questions = conv16(dflt_dns.num.questions);
+    dns->num.answers = conv16(dflt_dns.num.answers);
+    dns->num.authority_rss = conv16(dflt_dns.num.authority_rss);
+    dns->num.additional_rss = conv16(dflt_dns.num.additional_rss);
+
+
+}
+
+
+void init_val_dns_tail(struct packet_ptr *ptr){
+    struct dns_question_tail *tail = ptr->tail;
+    tail->qclass = conv16(QUESTION_INTERNET); 
+    tail->qtype = conv16(QUESTION_IPV4);
+}
+
+uint16_t udp_checksum(struct packet_ptr *ptr){
+    struct udp *udp = ptr->udp;
+    uint32_t sum = 0;
+    sum += udp->src;
+    sum += udp->dest;
+    sum += udp->len;
+    sum += udp->check_sum_udp;
+
+    while(sum >> 16){
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return (uint16_t)(~sum);
+}
+
+uint16_t ip_checksum(struct packet_ptr *ptr){
+    struct ip *ip = ptr->ip;
+    uint32_t sum = 0;
+
+    sum += ip->version_IHL;
+    sum += ip->Dscp_ecn;
+    sum += ip->identification;
+    sum += ip->Total_length;
+    sum += ip->flag_fragment;
+    sum += (ip->timetolive << 8) | ip->protocol;
+    sum += ip->check_sum;
+
+    // ip address
+    sum += (ip->source >> 16) & 0xFFFF;
+    sum += ip->source & 0xFFFF;
+    sum += (ip->destination >> 16) & 0xFFFF;
+    sum += ip->destination & 0xFFFF;
+
+    // folding convert to 16 bit
+    while (sum >> 16){
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    return (uint16_t)(~sum);
+}
 
 int big_or_little(){
     uint16_t i = 1;
@@ -174,4 +301,6 @@ int main(){
     
 
     return 0;
+
+  
 }
