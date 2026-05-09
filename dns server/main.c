@@ -1,9 +1,11 @@
+
 #include "packet.h"
-
-
 
 uint8_t raw_buffer[1500];
 
+void init_checksum(struct packet_ptr *ptr);
+void init_val_dns_tail(struct packet_ptr *ptr);
+uint8_t *init_question(uint8_t *ptr);
 uint16_t QUESTION_LENGTH = 0;
 
 struct ip_details dflt_ip = {
@@ -95,30 +97,34 @@ void init_val_ip(struct packet_ptr *ptr){
     struct ip *ip = ptr->ip;
     ip->version_IHL = (dflt_ip.version << 4) | dflt_ip.ihl;
     ip->Dscp_ecn = (dflt_ip.dscp << 2) | dflt_ip.ecn;
-    ip->identification = dflt_ip.identification;
-    ip->Total_length = dflt_ip.total_length + QUESTION_LENGTH;
-    ip->flag_fragment = (dflt_ip.flag << 13) | dflt_ip.fragment;
+    ip->identification = conv16(dflt_ip.identification);
+    ip->Total_length = conv16(dflt_ip.total_length + QUESTION_LENGTH);
+    ip->flag_fragment = conv16((dflt_ip.flag << 13) | dflt_ip.fragment);
     ip->timetolive = dflt_ip.timetolive;
     ip->protocol = dflt_ip.protocol;
-    ip->check_sum = dflt_ip.check_sum;
-    ip->source = 0xC0A80125;
-    ip->destination = 0x08080808;
+    ip->check_sum = conv16(dflt_ip.check_sum);
+    ip->source = conv32(0xC0A80125);
+    ip->destination = conv32(0x08080808);
 
 
 }
 
+
+    
+
+
 void init_val_udp(struct packet_ptr *ptr){
     struct udp *udp = ptr->udp;
-    udp->src = dflt_udp.src;
-    udp->dest = dflt_udp.dest;
-    udp->len = dflt_udp.len + QUESTION_LENGTH;
-    udp->check_sum_udp = dflt_udp.check_sum_udp;
+    udp->src = conv16(dflt_udp.src);
+    udp->dest = conv16(dflt_udp.dest);
+    udp->len = conv16(dflt_udp.len + QUESTION_LENGTH);
+    udp->check_sum_udp = conv16(dflt_udp.check_sum_udp);
 
 }
 
 void init_val_dns_header(struct packet_ptr *ptr){
     struct dns_header *dns = ptr->dns_header;
-    dns->id = dflt_dns.id;
+    dns->id = conv16(dflt_dns.id);
     // initalizing all the flag
     uint16_t flag = 0;
     flag |= (dflt_flag.QR << 15);
@@ -132,11 +138,11 @@ void init_val_dns_header(struct packet_ptr *ptr){
     flag |= (dflt_flag.CD << 4);
     flag |= (dflt_flag.RCODE);
 
-    dns->flags = flag;
-    dns->num.questions = dflt_dns.num.questions;
-    dns->num.answers = dflt_dns.num.answers;
-    dns->num.authority_rss = dflt_dns.num.authority_rss;
-    dns->num.additional_rss = dflt_dns.num.additional_rss;
+    dns->flags = conv16(flag);
+    dns->num.questions = conv16(dflt_dns.num.questions);
+    dns->num.answers = conv16(dflt_dns.num.answers);
+    dns->num.authority_rss = conv16(dflt_dns.num.authority_rss);
+    dns->num.additional_rss = conv16(dflt_dns.num.additional_rss);
 
 
 }
@@ -144,8 +150,8 @@ void init_val_dns_header(struct packet_ptr *ptr){
 
 void init_val_dns_tail(struct packet_ptr *ptr){
     struct dns_question_tail *tail = ptr->tail;
-    tail->qclass = QUESTION_INTERNET; 
-    tail->qtype = QUESTION_IPV4;
+    tail->qclass = conv16(QUESTION_INTERNET); 
+    tail->qtype = conv16(QUESTION_IPV4);
 }
 
 uint16_t udp_checksum(struct packet_ptr *ptr){
@@ -170,12 +176,12 @@ uint16_t udp_checksum(struct packet_ptr *ptr){
     sum += udp->check_sum_udp;
 
     // dns header 
-    sum += dflt_dns.id;
-    sum += dflt_dns.flags;
-    sum += dflt_dns.num.questions;
-    sum += dflt_dns.num.answers;
-    sum += dflt_dns.num.authority_rss;
-    sum += dflt_dns.num.additional_rss;
+    sum += dns->flags;
+    sum += dns->id;
+    sum += dns->num.questions;
+    sum += dns->num.answers;
+    sum += dns->num.authority_rss;
+    sum += dns->num.additional_rss;
 
     // question
 
@@ -214,8 +220,8 @@ uint16_t ip_checksum(struct packet_ptr *ptr){
 }
 
 void init_checksum(struct packet_ptr *ptr){
-    ptr->ip->check_sum = ip_checksum(ptr);
-    ptr->udp->check_sum_udp = udp_checksum(ptr);
+    ptr->ip->check_sum = conv16(ip_checksum(ptr));
+    ptr->udp->check_sum_udp = conv16(udp_checksum(ptr));
 }
 
 int big_or_little(){
@@ -356,6 +362,13 @@ int main(){
     extract(packet);
     display(packet);
     
+
+    printf("\n\n\n");
+    packet_init(raw_buffer);
+
+    for(int i = 0; i<200;i++){
+        printf("%02x,", raw_buffer[i]);
+    }
 
     return 0;
 
